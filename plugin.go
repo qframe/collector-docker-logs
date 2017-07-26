@@ -1,4 +1,4 @@
-package qcollector_docker_log
+package qcollector_docker_logs
 
 import (
 	"context"
@@ -13,12 +13,15 @@ import (
 
 	"github.com/qnib/qframe-types"
 	"regexp"
+	"github.com/qframe/types/health"
+	"github.com/qframe/types/messages"
+	"github.com/qframe/types/docker-events"
 )
 
 const (
 	version = "0.2.0"
 	pluginTyp = "collector"
-	pluginPkg = "docker-log"
+	pluginPkg = "docker-logs"
 	dockerAPI = "v1.29"
 )
 
@@ -53,7 +56,7 @@ func (p *Plugin) StartSupervisor(ce events.Message, cnt types.ContainerJSON) {
 	go s.Run()
 }
 
-func (p *Plugin) StartSupervisorCE(ce qtypes.ContainerEvent) {
+func (p *Plugin) StartSupervisorCE(ce qtypes_docker_events.ContainerEvent) {
 	p.StartSupervisor(ce.Event, ce.Container)
 }
 
@@ -98,7 +101,12 @@ func (p *Plugin) SubscribeRunning() {
 					Attributes: map[string]string{"name": strings.Trim(cnt.Names[0],"/")},
 				},
 			}
-			ce := qtypes.NewContainerEvent(qtypes.NewTimedBase(p.Name, time.Unix(cnt.Created, 0)), cjson, event)
+			b := qtypes_messages.NewTimedBase(p.Name, time.Unix(cnt.Created, 0))
+			de := qtypes_docker_events.NewDockerEvent(b, event)
+			ce := qtypes_docker_events.NewContainerEvent(de, cjson)
+			h := qtypes_health.NewHealthBeat(b, "logRoutine", ce.Container.ID, "start")
+			p.Log("info", "Send HealthBeat for "+h.Actor)
+			p.QChan.SendData(h)
 			p.StartSupervisorCE(ce)
 		}
 	}
@@ -134,8 +142,8 @@ func (p *Plugin) Run() {
 		select {
 		case msg := <-dc.Read:
 			switch msg.(type) {
-			case qtypes.ContainerEvent:
-				ce := msg.(qtypes.ContainerEvent)
+			case qtypes_docker_events.ContainerEvent:
+				ce := msg.(qtypes_docker_events.ContainerEvent)
 				if len(inputs) != 0 && ! ce.InputsMatch(inputs) {
 					continue
 				}
@@ -150,9 +158,15 @@ func (p *Plugin) Run() {
 				case "container":
 					switch ce.Event.Action {
 					case "start":
+						b := qtypes_messages.NewTimedBase(p.Name, ce.Time)
+						hb := qtypes_health.NewHealthBeat(b, "logRoutine", ce.Container.ID, "start")
+						p.QChan.SendData(hb)
 						p.Log("debug", fmt.Sprintf("Container started: %s | ID:%s", ce.Container.Name, ce.Container.ID))
 						p.StartSupervisorCE(ce)
 					case "die":
+						b := qtypes_messages.NewTimedBase(p.Name, ce.Time)
+						hb := qtypes_health.NewHealthBeat(b, "logRoutine", ce.Container.ID, "stop")
+						p.QChan.SendData(hb)
 						p.sMap[ce.Event.Actor.ID].Com <- ce.Event.Action
 					}
 				}

@@ -1,4 +1,4 @@
-package qcollector_docker_log
+package qcollector_docker_logs
 
 import (
 	"bufio"
