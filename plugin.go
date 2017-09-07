@@ -38,13 +38,14 @@ type Plugin struct {
 	TimeRegex   *regexp.Regexp
 }
 
-func (p *Plugin) StartSupervisor(ce events.Message, cnt types.ContainerJSON) {
+func (p *Plugin) StartSupervisor(ce events.Message, cnt types.ContainerJSON, info types.Info) {
 	s := ContainerSupervisor{
 		Plugin: *p,
 		Action: ce.Action,
 		CntID: ce.Actor.ID,
 		CntName: ce.Actor.Attributes["name"],
-		Container: cnt,
+		Info: &info,
+		Container: &cnt,
 		Com: make(chan interface{}),
 		cli: p.cli,
 		qChan: p.QChan,
@@ -58,7 +59,7 @@ func (p *Plugin) StartSupervisor(ce events.Message, cnt types.ContainerJSON) {
 }
 
 func (p *Plugin) StartSupervisorCE(ce qtypes_docker_events.ContainerEvent) {
-	p.StartSupervisor(ce.Event, ce.Container)
+	p.StartSupervisor(ce.Event, ce.Container, p.info)
 }
 
 
@@ -183,7 +184,6 @@ func (p *Plugin) Run() {
 		}
 	}
 }
-
 
 func (p *Plugin) sendHealthhbeat(ce qtypes_docker_events.ContainerEvent, action string) {
 	skipLabel := p.CfgStringOr("skip-container-label", "org.qnib.qframe.skip-log")

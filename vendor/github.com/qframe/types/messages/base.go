@@ -50,7 +50,6 @@ func NewBaseFromBase(src string, b Base) Base {
 	}
 }
 
-
 func (b *Base) ToJSON() map[string]interface{} {
 	res := map[string]interface{}{
 		"base_version": b.BaseVersion,
@@ -116,7 +115,6 @@ func Sha1HashString(s string) string {
 	return fmt.Sprintf("%x", bs)
 }
 
-
 func (b *Base) StopProcessing(p *qtypes_plugin.Plugin, allowEmptyInput bool) bool {
 	if b.SourceID != 0 && p.MyID == b.SourceID {
 		msg := fmt.Sprintf("Msg came from the same GID (My:%d == %d:SourceID)", p.MyID, b.SourceID)
@@ -133,12 +131,12 @@ func (b *Base) StopProcessing(p *qtypes_plugin.Plugin, allowEmptyInput bool) boo
 	}
 	srcSuccess := p.CfgBoolOr("source-success", true)
 	if ! b.InputsMatch(inputs) {
-		p.Log("debug", fmt.Sprintf("InputsMatch(%v) != %s", inputs, b.GetLastSource()))
+		p.Log("trace", fmt.Sprintf("InputsMatch(%v) != %s", inputs, b.GetLastSource()))
 		return true
 	}
 	if b.SourceSuccess != srcSuccess {
 		msg := fmt.Sprintf("qm.SourceSuccess (%v) != (%v) srcSuccess", b.SourceSuccess, srcSuccess)
-		p.Log("debug", msg)
+		p.Log("trace", msg)
 		return true
 	}
 	return false
