@@ -77,7 +77,7 @@ func (p *Plugin) SubscribeRunning() {
 	if err != nil {
 		p.Log("error", fmt.Sprintf("Failed to list containers: %s", err.Error()))
 	} else {
-		logLabel := p.CfgStringOr("enable-container-label", "org.qnib.qframe.enable-log")
+		logEnv := p.CfgStringOr("enable-log-env", "LOG_CAPTURE_ENABLED")
 		for _, cnt := range cnts {
 			cjson, err := p.cli.ContainerInspect(ctx, cnt.ID)
 			if err != nil {
@@ -93,16 +93,21 @@ func (p *Plugin) SubscribeRunning() {
 			}
 			// Skip those with the label:
 			logCnt := false
-			for label, _ := range cjson.Config.Labels {
-				if label == logLabel {
-					p.Log("info", fmt.Sprintf("Subscribing to logs of '%s' as label '%s' is set", cnt.Names, logLabel))
+			for _, v := range cjson.Config.Env {
+				s := strings.Split(v,"=")
+				if len(s) != 2 {
+					p.Log("warn", fmt.Sprintf("Could not parse environment variable '%s'", v))
+					continue
+				}
+				if s[0] == logEnv && s[1] == "true" {
+					p.Log("info", fmt.Sprintf("Subscribing to logs of '%s' as environment variable '%s' is set to '%s", cnt.Names, logEnv, s[1]))
 					logCnt = true
 					break
 
 				}
 			}
 			if ! logCnt {
-				p.Log("info", fmt.Sprintf("Skip subscribing to logs of '%s' as label '%s' is set", cnt.Names, logLabel))
+				p.Log("info", fmt.Sprintf("Skip subscribing to logs of '%s' as environment variable '%s' was not found", cnt.Names, logEnv))
 				b := qtypes_messages.NewTimedBase(p.Name, time.Unix(cnt.Created, 0))
 				de := qtypes_docker_events.NewDockerEvent(b, event)
 				ce := qtypes_docker_events.NewContainerEvent(de, cjson)
