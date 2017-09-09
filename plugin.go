@@ -55,11 +55,12 @@ func (p *Plugin) StartSupervisor(ce events.Message, cnt types.ContainerJSON, inf
 		s.TailRunning = p.CfgStringOr("tail-logs-since", "1m")
 	}
 	p.sMap[ce.Actor.ID] = s
-	go s.Run()
+	defer delete(p.sMap, ce.Actor.ID)
+	s.Run()
 }
 
 func (p *Plugin) StartSupervisorCE(ce qtypes_docker_events.ContainerEvent) {
-	p.StartSupervisor(ce.Event, ce.Container, p.info)
+	go p.StartSupervisor(ce.Event, ce.Container, p.info)
 }
 
 
