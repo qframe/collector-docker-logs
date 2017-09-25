@@ -28,6 +28,7 @@ func main() {
 	// Create conf
 	myCfg := map[string]string{
 		"log.level": "debug",
+		"log.only-plugins": "docker-logs",
 		"cache.inventory.inputs": "docker-events",
 	}
 	cfg := config.NewConfig([]config.Provider{config.NewStatic(myCfg)})
