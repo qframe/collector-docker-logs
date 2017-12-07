@@ -21,7 +21,7 @@ import (
 )
 
 const (
-	version = "0.4.2"
+	version = "0.4.3"
 	pluginTyp = "collector"
 	pluginPkg = "docker-logs"
 	dockerAPI = "v1.29"
